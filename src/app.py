@@ -15,7 +15,7 @@ from .backend import routers, database
 # Initialize web host
 app = FastAPI(
     title="Mergington High School API",
-    description="API for viewing and signing up for extracurricular activities"
+    description="API for extracurricular activities and school announcements"
 )
 
 # Initialize database with sample data if empty
@@ -32,4 +32,5 @@ def root():
 
 # Include routers
 app.include_router(routers.activities.router)
+app.include_router(routers.announcements.router)
 app.include_router(routers.auth.router)
