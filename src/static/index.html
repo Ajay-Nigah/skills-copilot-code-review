@@ -17,6 +17,10 @@
       <h2>Extracurricular Activities</h2>
       <div id="user-controls">
         <div id="user-status">
+          <button id="manage-announcements-button" class="icon-button" type="button">
+            <span aria-hidden="true">📣</span>
+            <span>Announcements</span>
+          </button>
           <button id="login-button" class="icon-button">
             <span class="user-icon">👤</span>
             <span>Login</span>
@@ -28,6 +32,8 @@
         </div>
       </div>
     </header>
+
+    <section id="announcements" class="announcements" aria-label="Announcements" aria-live="polite"></section>
 
     <main>
       <section id="activities-container">
@@ -133,6 +139,54 @@
         <div id="login-message" class="hidden message"></div>
       </div>
     </div>
+
+    <dialog id="announcements-dialog" class="announcements-dialog" aria-labelledby="announcements-dialog-title">
+      <div class="announcement-manager">
+        <div class="announcement-dialog-header">
+          <div>
+            <p class="eyebrow">School updates</p>
+            <h2 id="announcements-dialog-title">Manage announcements</h2>
+          </div>
+          <button id="close-announcements-dialog" class="dialog-close" type="button" aria-label="Close announcements">&times;</button>
+        </div>
+        <div id="announcement-auth-notice" class="announcement-auth-notice hidden">
+          <p>Sign in with a teacher account to create, edit, and remove announcements.</p>
+          <button id="announcement-login-button" type="button">Sign in</button>
+        </div>
+        <div id="announcement-manager-content" class="hidden">
+          <form id="announcement-form" class="announcement-form">
+            <h3 id="announcement-form-title">Create an announcement</h3>
+            <div class="form-group">
+              <label for="announcement-message">Message</label>
+              <textarea id="announcement-message" name="message" rows="3" maxlength="500" required placeholder="Share a helpful update with students and staff"></textarea>
+              <span class="field-hint">Up to 500 characters.</span>
+            </div>
+            <div class="announcement-date-fields">
+              <div class="form-group">
+                <label for="announcement-start-date">Start date <span>(optional)</span></label>
+                <input id="announcement-start-date" name="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label for="announcement-expiration-date">Expiration date <span>(required)</span></label>
+                <input id="announcement-expiration-date" name="expiration_date" type="date" required />
+              </div>
+            </div>
+            <div class="announcement-form-actions">
+              <button id="save-announcement-button" type="submit">Publish announcement</button>
+              <button id="cancel-announcement-edit" class="secondary-button hidden" type="button">Cancel edit</button>
+            </div>
+          </form>
+          <div id="announcement-manager-message" class="message hidden" role="status"></div>
+          <div class="announcement-list-heading">
+            <h3>All announcements</h3>
+            <span id="announcement-count" class="announcement-count"></span>
+          </div>
+          <div id="announcement-list" class="announcement-list" aria-live="polite">
+            <p class="announcement-list-empty">Loading announcements...</p>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <script src="app.js"></script>
   </body>
