@@ -664,7 +664,6 @@ footer {
 #logout-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }
-
 #user-controls {
   display: flex;
   align-items: center;
