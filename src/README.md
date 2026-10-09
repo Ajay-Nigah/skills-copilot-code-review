@@ -39,9 +39,13 @@ A super simple FastAPI application that allows students to view and sign up for 
 | PUT    | `/announcements/{id}`                                             | Update an announcement (teacher sign-in required)                    |
 | DELETE | `/announcements/{id}`                                             | Delete an announcement (teacher sign-in required)                    |
 
-Announcement requests that manage records require the bearer token returned
-by `/auth/login`. Each announcement has a message and required expiration
-date; its start date is optional.
+`/auth/login` sets a Secure, HttpOnly, SameSite=Strict session cookie. Each
+announcement has a message and required expiration date; its start date is
+optional. Set
+`SCHOOL_TIMEZONE` to the school's IANA timezone (defaults to
+`America/New_York`) so date-based visibility uses the school calendar. Set
+`INITIAL_ANNOUNCEMENT_MESSAGE` to seed an initial announcement when the
+announcements collection is empty; without it, no announcement is seeded.
 
 ## Data Model
 

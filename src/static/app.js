@@ -84,7 +84,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Authentication state
   let currentUser = null;
-  let authToken = null;
   let editingAnnouncementId = null;
 
   // Time range mappings for the dropdown
@@ -141,50 +140,39 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchActivities();
   }
 
-  // Check if user is already logged in (from localStorage)
+  // Check if a user profile is saved and validate its session with the server
   function checkAuthentication() {
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) {
       try {
-        const savedSession = JSON.parse(savedUser);
-        if (!savedSession.session_token) {
-          throw new Error("Saved session token is missing");
-        }
-        authToken = savedSession.session_token;
-        currentUser = savedSession;
+        const savedProfile = JSON.parse(savedUser);
+        currentUser = {
+          username: savedProfile.username,
+          display_name: savedProfile.display_name,
+          role: savedProfile.role,
+        };
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
         updateAuthUI();
-        // Verify the stored user with the server
         validateUserSession();
       } catch (error) {
         console.error("Error parsing saved user", error);
-        logout(); // Clear invalid data
+        logout();
       }
     }
 
-    // Set authentication class on body
     updateAuthBodyClass();
   }
 
-  // Validate user session with the server
   async function validateUserSession() {
     try {
-      const response = await fetch("/auth/check-session", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-
+      const response = await fetch("/auth/check-session");
       if (!response.ok) {
-        // Session invalid, log out
         logout();
         return;
       }
 
-      // Session is valid, update user data
-      const userData = await response.json();
-      currentUser = userData;
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({ ...userData, session_token: authToken })
-      );
+      currentUser = await response.json();
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
       updateAuthUI();
     } catch (error) {
       console.error("Error validating session:", error);
@@ -220,17 +208,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Login function
   async function login(username, password) {
     try {
-      const response = await fetch(
-        `/auth/login?username=${encodeURIComponent(
-          username
-        )}&password=${encodeURIComponent(password)}`,
-        {
-          method: "POST",
-        }
-      );
+      const credentials = new URLSearchParams({ username, password });
+      const response = await fetch(`/auth/login?${credentials}`, {
+        method: "POST",
+      });
 
       const data = await response.json();
-
       if (!response.ok) {
         showLoginMessage(
           data.detail || "Invalid username or password",
@@ -239,17 +222,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
       }
 
-      // Login successful
-      authToken = data.session_token;
       currentUser = {
         username: data.username,
         display_name: data.display_name,
         role: data.role,
       };
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({ ...currentUser, session_token: authToken })
-      );
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
       updateAuthUI();
       closeLoginModalHandler();
       showMessage(`Welcome, ${currentUser.display_name}!`, "success");
@@ -261,16 +239,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Logout function
   function logout() {
-    const token = authToken;
-    if (token) {
-      fetch("/auth/logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch((error) => console.error("Error revoking session:", error));
+    if (currentUser) {
+      fetch("/auth/logout", { method: "POST" }).catch((error) =>
+        console.error("Error revoking session:", error)
+      );
     }
-    authToken = null;
     currentUser = null;
     localStorage.removeItem("currentUser");
     if (announcementsDialog.open) {
@@ -325,10 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
     await login(username, password);
   });
 
-  function announcementAuthHeaders() {
-    return { Authorization: `Bearer ${authToken}` };
-  }
-
   function formatAnnouncementDate(dateString) {
     if (!dateString) {
       return "No start date";
@@ -338,13 +308,6 @@ document.addEventListener("DOMContentLoaded", () => {
       month: "short",
       day: "numeric",
     });
-  }
-
-  function getLocalDateString() {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${today.getFullYear()}-${month}-${day}`;
   }
 
   async function fetchActiveAnnouncements() {
@@ -401,8 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cancelAnnouncementEdit.classList.add("hidden");
   }
 
-  function getAnnouncementStatus(announcement) {
-    const today = getLocalDateString();
+  function getAnnouncementStatus(announcement, today) {
     if (announcement.expiration_date < today) {
       return { label: "Expired", className: "announcement-status-expired" };
     }
@@ -412,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return { label: "Active", className: "announcement-status-active" };
   }
 
-  function renderAnnouncementList(announcements) {
+  function renderAnnouncementList(announcements, today) {
     announcementList.replaceChildren();
     announcementCount.textContent = `${announcements.length} ${
       announcements.length === 1 ? "announcement" : "announcements"
@@ -433,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const copy = document.createElement("div");
       copy.className = "announcement-list-copy";
-      const status = getAnnouncementStatus(announcement);
+      const status = getAnnouncementStatus(announcement, today);
       const statusBadge = document.createElement("span");
       statusBadge.className = `announcement-status ${status.className}`;
       statusBadge.textContent = status.label;
@@ -493,27 +455,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function fetchAllAnnouncements() {
-    if (!authToken) {
+    if (!currentUser) {
       return;
     }
     announcementList.innerHTML =
       '<p class="announcement-list-empty">Loading announcements...</p>';
 
     try {
-      const response = await fetch("/announcements", {
-        headers: announcementAuthHeaders(),
-      });
+      const [response, schoolDateResponse] = await Promise.all([
+        fetch("/announcements"),
+        fetch("/announcements/today"),
+      ]);
       if (response.status === 401) {
         logout();
         announcementManagerContent.classList.add("hidden");
         announcementAuthNotice.classList.remove("hidden");
         return;
       }
-      const announcements = await response.json();
+      const [announcements, schoolDate] = await Promise.all([
+        response.json(),
+        schoolDateResponse.json(),
+      ]);
       if (!response.ok) {
         throw new Error(announcements.detail || "Unable to load announcements");
       }
-      renderAnnouncementList(announcements);
+      if (!schoolDateResponse.ok) {
+        throw new Error(schoolDate.detail || "Unable to load school date");
+      }
+      renderAnnouncementList(announcements, schoolDate.today);
     } catch (error) {
       console.error("Error loading announcements:", error);
       showAnnouncementManagerMessage(
@@ -549,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(
         `/announcements/${encodeURIComponent(announcement.id)}`,
-        { method: "DELETE", headers: announcementAuthHeaders() }
+        { method: "DELETE" }
       );
       if (response.status === 401) {
         logout();
@@ -615,7 +584,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(endpoint, {
         method: isEditing ? "PUT" : "POST",
         headers: {
-          ...announcementAuthHeaders(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),

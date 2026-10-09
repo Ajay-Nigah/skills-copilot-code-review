@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from ..authentication import get_authenticated_teacher
 from ..database import announcements_collection
+from ..school_time import school_today
 
 router = APIRouter(prefix="/announcements", tags=["announcements"])
 
@@ -43,7 +44,7 @@ def validate_announcement_dates(
 @router.get("/active", response_model=List[Dict[str, Any]])
 def get_active_announcements() -> List[Dict[str, Any]]:
     """Get announcements that are currently within their date range."""
-    today = date.today().isoformat()
+    today = school_today().isoformat()
     announcements = announcements_collection.find({
         "expiration_date": {"$gte": today},
         "$or": [
@@ -52,6 +53,12 @@ def get_active_announcements() -> List[Dict[str, Any]]:
         ],
     }).sort("expiration_date", 1)
     return [serialize_announcement(item) for item in announcements]
+
+
+@router.get("/today", response_model=Dict[str, str])
+def get_school_date() -> Dict[str, str]:
+    """Get the current date in the configured school timezone."""
+    return {"today": school_today().isoformat()}
 
 
 @router.get("", response_model=List[Dict[str, Any]])

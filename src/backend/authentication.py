@@ -5,12 +5,11 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Request
 
 from .database import sessions_collection, teachers_collection
 
-bearer_scheme = HTTPBearer(auto_error=False)
+SESSION_COOKIE_NAME = "teacher_session"
 
 
 def create_session(username: str) -> str:
@@ -32,13 +31,14 @@ def revoke_session(token: str) -> None:
 
 
 def get_authenticated_teacher(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    request: Request,
 ) -> Dict[str, Any]:
-    """Return the teacher for a valid bearer token or raise 401."""
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    """Return the teacher for a valid session cookie or raise 401."""
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    token_hash = hashlib.sha256(credentials.credentials.encode()).hexdigest()
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     session = sessions_collection.find_one({
         "_id": token_hash,
         "expires_at": {"$gt": datetime.now(timezone.utc)},

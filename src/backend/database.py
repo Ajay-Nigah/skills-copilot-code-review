@@ -3,10 +3,12 @@ MongoDB database configuration and setup for Mergington High School API
 """
 
 from calendar import monthrange
-from datetime import date
+import os
 
 from pymongo import MongoClient
 from argon2 import PasswordHasher, exceptions as argon2_exceptions
+
+from .school_time import school_today
 
 # Connect to MongoDB
 client = MongoClient('mongodb://localhost:27017/')
@@ -59,16 +61,18 @@ def init_database():
 
     # Initialize announcements if empty
     if announcements_collection.count_documents({}) == 0:
-        today = date.today()
-        expiration_date = today.replace(
-            day=monthrange(today.year, today.month)[1]
-        )
-        announcements_collection.insert_one({
-            "_id": "registration-reminder",
-            "message": "Activity registration is open until the end of the month. Don't lose your spot!",
-            "start_date": None,
-            "expiration_date": expiration_date.isoformat(),
-        })
+        initial_announcement_message = os.getenv("INITIAL_ANNOUNCEMENT_MESSAGE")
+        if initial_announcement_message:
+            today = school_today()
+            expiration_date = today.replace(
+                day=monthrange(today.year, today.month)[1]
+            )
+            announcements_collection.insert_one({
+                "_id": "registration-reminder",
+                "message": initial_announcement_message,
+                "start_date": None,
+                "expiration_date": expiration_date.isoformat(),
+            })
 
 
 # Initial database if empty
