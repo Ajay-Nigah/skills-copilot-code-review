@@ -118,5 +118,7 @@ Let's add a simple banner feature for teachers to make announcements and then as
 - Copilot Review in VS Code only considers uncommitted changes. Don't commit before asking for the review.
 - If Copilot doesn't provide review feedback, make sure to click the correct review button for the grouping (unstaged, staged, uncommitted).
 - If Copilot doesn't see your changes, make sure to save the files first.
+- If the **Code Review** button is missing, make sure the GitHub Copilot and GitHub Copilot Chat extensions are installed, enabled, and signed in. This workspace recommends both extensions, and the Codespace installs them automatically.
+- If the button is still missing, code review may not be available for your account or may be disabled by your organization. Check your [Copilot feature settings](https://github.com/settings/copilot/features) or ask your organization administrator. See the [VS Code code review documentation](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/use-code-review?tool=vscode#reviewing-all-uncommitted-changes) for current requirements.
 
 </details>
